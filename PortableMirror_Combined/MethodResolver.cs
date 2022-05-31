@@ -27,7 +27,7 @@ namespace PortableMirror
                 if (l_methods.Any())
                 {
                     ms_prepareForCalibration = l_methods.First();
-                    Main.Logger.Msg("VRCTrackingManager.PrepareForCalibration -> VRCTrackingManager." + ms_prepareForCalibration.Name);
+                    //Main.Logger.Msg("VRCTrackingManager.PrepareForCalibration -> VRCTrackingManager." + ms_prepareForCalibration.Name);
                 }
                 else
                     Main.Logger.Warning("Can't resolve VRCTrackingManager.PrepareForCalibration");
@@ -44,7 +44,7 @@ namespace PortableMirror
                 if (l_methods.Any())
                 {
                     ms_restoreTrackingAfterCalibration = l_methods.First();
-                    Main.Logger.Msg("VRCTrackingManager.RestoreTrackingAfterCalibration -> VRCTrackingManager." + ms_restoreTrackingAfterCalibration.Name);
+                    //Main.Logger.Msg("VRCTrackingManager.RestoreTrackingAfterCalibration -> VRCTrackingManager." + ms_restoreTrackingAfterCalibration.Name);
                 }
                 else
                     Main.Logger.Warning("Can't resolve VRCTrackingManager.RestoreTrackingAfterCalibration");

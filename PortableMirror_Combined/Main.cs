@@ -11,8 +11,7 @@ using UnhollowerRuntimeLib;
 using System.IO;
 using VRC.Core;
 
-
-[assembly: MelonInfo(typeof(PortableMirror.Main), "PortableMirrorMod", "1.6.4", "Nirvash, M-oons")] //Name changed to break auto update
+[assembly: MelonInfo(typeof(PortableMirror.Main), "PortableMirrorMod", "1.6.5", "Nirvash, M-oons")] //Name changed to break auto update
 [assembly: MelonGame("VRChat", "VRChat")]
 [assembly: MelonOptionalDependencies("ActionMenuApi")]
 
@@ -400,6 +399,8 @@ namespace PortableMirror
         { //https://github.com/SDraw/ml_mods/blob/af8eb07bd810067b968f0d21bb1dacf0be89d8b3/ml_clv/Main.cs#L118
             try
             {
+                //Logger.Msg("CAL STARTED");
+
                 if (_calInit && Main._cal_enable.Value)
                 {
                     if (_cal_DelayMirror.Value)
@@ -407,7 +408,7 @@ namespace PortableMirror
                     else
                         waitForMeasureRoutine = MelonCoroutines.Start(WaitForMeasure());
                 }
-                //Logger.Msg("CAL START");
+                //Logger.Msg("CAL START Complete");
             }
             catch (System.Exception ex) { Logger.Error("Error in OnCalibrationBegin:\n" + ex.ToString()); }
         }
@@ -417,10 +418,14 @@ namespace PortableMirror
         {
             try
             {
+                //Logger.Msg("CAL END");
+                //if you cal faster then wait, doesnt stop
                 if (calDelayRoutine != null) MelonCoroutines.Stop(calDelayRoutine);
+                //Logger.Msg("1");
                 if (waitForMeasureRoutine != null) MelonCoroutines.Stop(waitForMeasureRoutine);
+                //Logger.Msg("2");
                 ToggleMirrorCal(false);
-                //Logger.Msg("CAL LEAVE");
+                //Logger.Msg("CAL END Complete");
             }
             catch (System.Exception ex) { Logger.Error("Error in OnCalibrationEnd:\n" + ex.ToString()); }
         }
@@ -676,13 +681,18 @@ namespace PortableMirror
 
         public static void ToggleMirrorCal(bool state)
         {
+            //Logger.Msg("ToggleMirrorCal");
+
             if (_mirrorCal != null && !state)
             {
+                //.Msg("STate 1");
+                ResetControllerLayer();
                 try { UnityEngine.Object.Destroy(_mirrorCal); } catch (System.Exception ex) { Logger.Msg(ConsoleColor.DarkRed, ex.ToString()); }
                 _mirrorCal = null;
             }
             else if(_mirrorCal == null && state)
             {
+                //Logger.Msg("STate 2");
                 if (Main._cal_MirrorState.Value == "MirrorCutout" || Main._cal_MirrorState.Value == "MirrorTransparent" || Main._cal_MirrorState.Value == "MirrorCutoutSolo" || Main._cal_MirrorState.Value == "MirrorTransparentSolo") SetAllMirrorsToIgnoreShader();
                 VRCPlayer player = Utils.GetVRCPlayer();
                 var cam = Camera.main.gameObject;
@@ -721,18 +731,18 @@ namespace PortableMirror
 
         private static void SetControllerLayer(int layer)
         {
+            calObjects.Clear();
             var cons = new string[] {
                 "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Controller (left)",
                 "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Controller (right)",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck1/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck2/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck3/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck4/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck5/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck6/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck7/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck8/",
-                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Puck9/"};
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker1/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker2/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker3/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker4/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker5/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker6/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker7/",
+                "_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Tracker8/"};
             foreach (var c in cons)
             {
                 GameObject Con = GameObject.Find(c);
@@ -740,18 +750,32 @@ namespace PortableMirror
                     break;
                 foreach (var mesh in Con.GetComponentsInChildren<MeshRenderer>(true))
                 {
-                    //Logger.Msg("Setting layer to " + layer + " for " + mesh.name);
-                    mesh.gameObject.layer = layer;
+                    if (!Utils.GetPath(mesh.transform).Contains("ControllerUI"))
+                    {
+                        //Logger.Msg("Setting layer to " + layer + " for " + Utils.GetPath(mesh.transform));
+                        calObjects.Add(mesh.gameObject, mesh.gameObject.layer);
+                        mesh.gameObject.layer = layer;
+                    }
                 }
+            }
+        }
+
+        private static void ResetControllerLayer()
+        {
+            foreach (var c in calObjects)
+            {
+                //Logger.Msg("Resetting layer to " + c.Value + " for " + Utils.GetPath(c.Key.transform));
+                c.Key.layer = c.Value;
             }
         }
 
         public static IEnumerator WaitForMeasure()
         {
+            //Logger.Msg("WaitForMeasure");
             _calHeight = 0;
             var player = Utils.GetVRCPlayer();
-            var abortTime = Time.time + 30f;
-            while (Time.time < abortTime || player?.transform?.root?.GetComponentInChildren<VRCPlayer>()?.field_Internal_Animator_0 is null)
+            var abortTime = Time.time + 10f;
+            while (Time.time < abortTime && player?.transform?.root?.GetComponentInChildren<VRCPlayer>()?.field_Internal_Animator_0 is null)
             {
                 yield return null;
             }
@@ -771,7 +795,7 @@ namespace PortableMirror
                                               Vector3.Distance(anim.GetBoneTransform(HumanBodyBones.Chest).position, anim.GetBoneTransform(HumanBodyBones.Neck).position) +
                                               Vector3.Distance(anim.GetBoneTransform(HumanBodyBones.Neck).position, anim.GetBoneTransform(HumanBodyBones.Head).position);
 
-                Logger.Msg("Height is " + height);
+                //Logger.Msg("Height is " + height);
                 _calHeight = height;
             }
             catch (Exception ex)
@@ -780,12 +804,17 @@ namespace PortableMirror
             }
             
             ToggleMirrorCal(true);
+            //Logger.Msg("WaitForMeasure-Done");
+
         }
 
         public static IEnumerator DelayCalMirror()
         {
+            //Logger.Msg("DelayCalMirror");
             yield return new WaitForSeconds(_cal_DelayMirrorTime.Value);
             waitForMeasureRoutine = MelonCoroutines.Start(WaitForMeasure());
+            //Logger.Msg("DelayCalMirror-Done");
+
 
         }
         public static IEnumerator calMirrorTracking()
@@ -874,7 +903,7 @@ namespace PortableMirror
         public static bool _AllPickupable = false;
         public static bool _calInit = false;
         public static float _calHeight;
-
+        
         public static GameObject _mirror45;
         public static float _oldMirrorDistance45;
         public static float _oldMirrorScaleY45;
@@ -890,6 +919,7 @@ namespace PortableMirror
         public static float _oldMirrorScaleYTrans;
 
         public static GameObject _mirrorCal;
+        public static Dictionary<GameObject, int> calObjects = new Dictionary<GameObject, int>();
     }
 }
 

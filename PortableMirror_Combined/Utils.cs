@@ -78,5 +78,13 @@ namespace PortableMirror
             }
             return component;
         }
+        public static string GetPath(this Transform current)
+        {//http://answers.unity.com/answers/261847/view.html
+            if (current.parent == null)
+                return "/" + current.name;
+            return current.parent.GetPath() + "/" + current.name;
+        }
+      
+
     }
 }
